@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TON Store</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: Arial; text-align: center; padding: 20px; }
+        .product { border: 1px solid #ddd; padding: 15px; margin: 10px; }
+        button { background: #0088cc; color: white; border: none; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🛒 TON Store</h1>
+    <div id="products">
+        <p>Введите запрос в боте, чтобы увидеть товары.</p>
+    </div>
+
+    <script>
+        Telegram.WebApp.ready();
+        
+        // Получаем поисковый запрос из URL (например: ?q=iphone)
+        const query = new URLSearchParams(window.location.search).get('q');
+        
+        if (query) {
+            fetch(`/api/search?q=${query}`)
+                .then(res => res.json())
+                .then(products => {
+                    let html = '';
+                    products.forEach(p => {
+                        html += `
+                        <div class="product">
+                            <h3>${p.title}</h3>
+                            <p>💰 ${p.price} ₽</p>
+                            <button onclick="buy('${p.url}')">Купить</button>
+                        </div>`;
+                    });
+                    document.getElementById('products').innerHTML = html;
+                });
+        }
+
+        function buy(url) {
+            Telegram.WebApp.sendData(JSON.stringify({ url: url }));
+        }
+    </script>
+</body>
+</html>
