@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <!-- Кеширование -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>TON Store</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* Базовые стили */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8f8f8;
+            color: #333;
+            line-height: 1.6;
+            padding: 12px;
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+        
+        h1 {
+            font-size: 22px;
+            margin: 15px 0;
+            color: #0088cc;
+        }
+        
+        #products {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .product {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .product h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .product p {
+            color: #666;
+            margin-bottom: 12px;
+        }
+        
+        button {
+            background: #0088cc;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 15px;
+            width: 100%;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        button:active {
+            background: #006699;
+        }
+        
+        /* Мобильная адаптация */
+        @media (max-width: 480px) {
+            body {
+                padding: 8px;
+            }
+            
+            .product {
+                padding: 12px;
+            }
+            
+            button {
+                padding: 12px;
+                font-size: 16px;
+            }
+        }
+        
+        /* Для Telegram WebApp */
+        html {
+            height: 100vh;
+            height: -webkit-fill-available;
+        }
+    </style>
+</head>
+<body>
+    <h1>🛒 TON Store</h1>
+    <div id="products">
+        <p>Введите запрос в боте, чтобы увидеть товары.</p>
+    </div>
+
+    <script>
+        // Версия для кеша (меняйте при обновлении)
+        const VERSION = 'v3_' + Date.now();
+        
+        // Инициализация Telegram WebApp
+        if (window.Telegram?.WebApp) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
+            Telegram.WebApp.enableClosingConfirmation();
+            
+            // Принудительное обновление кеша
+            if (!window.location.search.includes('v=')) {
+                window.location.search = `?v=${VERSION}`;
+                return;
+            }
+        }
+        
+        // Адаптация под разные экраны
+        function adjustLayout() {
+            document.documentElement.style.setProperty(
+                '--vh', 
+                `${window.innerHeight * 0.01}px`
+            );
+        }
+        
+        window.addEventListener('resize', adjustLayout);
+        adjustLayout();
+        
+        // Загрузка товаров
+        const query = new URLSearchParams(window.location.search).get('q');
+        if (query) {
+            loadProducts(query);
+        }
+        
+        async function loadProducts(query) {
+            try {
+                const response = await fetch(`/api/search?q=${query}&v=${VERSION}`);
+                const products = await response.json();
+                
+                let html = '';
+                if (products.length > 0) {
+                    products.forEach(p => {
+                        html += `
+                        <div class="product">
+                            <h3>${p.title}</h3>
+                            <p>💰 ${p.price} ₽</p>
+                            <button onclick="buyProduct('${p.id}')">Купить</button>
+                        </div>`;
+                    });
+                } else {
+                    html = '<p>Товары не найдены</p>';
+                }
+                
+                document.getElementById('products').innerHTML = html;
+            } catch (error) {
+                document.getElementById('products').innerHTML = `
+                    <p style="color: red">Ошибка загрузки. Пожалуйста, попробуйте позже.</p>
+                `;
+                console.error('Ошибка:', error);
+            }
+        }
+        
+        function buyProduct(productId) {
+            if (window.Telegram?.WebApp) {
+                Telegram.WebApp.sendData(JSON.stringify({
+                    action: 'buy',
+                    product_id: productId,
+                    version: VERSION
+                }));
+                Telegram.WebApp.close();
+            } else {
+                alert(`Товар ${productId} добавлен в корзину`);
+            }
+        }
+    </script>
+</body>
+</html>
