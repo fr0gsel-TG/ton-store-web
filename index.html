@@ -104,6 +104,9 @@
     </div>
 
     <script>
+        // Проверяем, не пытаемся ли мы использовать React где-то
+        if (typeof React !== 'undefined') {
+              console.warn('React detected but not properly configured');
         // Версия для кеша (меняйте при обновлении)
         const VERSION = 'v3_' + Date.now();
         
@@ -180,3 +183,4 @@
     </script>
 </body>
 </html>
+
