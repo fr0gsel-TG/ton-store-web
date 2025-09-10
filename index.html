@@ -95,12 +95,6 @@
             height: 100vh;
             height: -webkit-fill-available;
         }
-        
-        .error-message {
-            color: red;
-            text-align: center;
-            padding: 20px;
-        }
     </style>
 </head>
 <body>
@@ -113,21 +107,17 @@
         // Версия для кеша (меняйте при обновлении)
         const VERSION = 'v3_' + Date.now();
         
-        // Безопасная инициализация Telegram WebApp
-        function initTelegramWebApp() {
-            if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
-                Telegram.WebApp.ready();
-                Telegram.WebApp.expand();
-                Telegram.WebApp.enableClosingConfirmation();
-                
-                // Принудительное обновление кеша
-                if (!window.location.search.includes('v=')) {
-                    window.location.search = `?v=${VERSION}`;
-                    return false;
-                }
-                return true;
+        // Инициализация Telegram WebApp
+        if (window.Telegram?.WebApp) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
+            Telegram.WebApp.enableClosingConfirmation();
+            
+            // Принудительное обновление кеша
+            if (!window.location.search.includes('v=')) {
+                window.location.search = `?v=${VERSION}`;
+                return;
             }
-            return false;
         }
         
         // Адаптация под разные экраны
@@ -138,12 +128,18 @@
             );
         }
         
+        window.addEventListener('resize', adjustLayout);
+        adjustLayout();
+        
         // Загрузка товаров
+        const query = new URLSearchParams(window.location.search).get('q');
+        if (query) {
+            loadProducts(query);
+        }
+        
         async function loadProducts(query) {
             try {
-                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&v=${VERSION}`);
-                if (!response.ok) throw new Error('Ошибка сервера');
-                
+                const response = await fetch(`/api/search?q=${query}&v=${VERSION}`);
                 const products = await response.json();
                 
                 let html = '';
@@ -152,7 +148,7 @@
                         html += `
                         <div class="product">
                             <h3>${p.title}</h3>
-                            <p>💰 ${p.price}</p>
+                            <p>💰 ${p.price} ₽</p>
                             <button onclick="buyProduct('${p.id}')">Купить</button>
                         </div>`;
                     });
@@ -163,15 +159,14 @@
                 document.getElementById('products').innerHTML = html;
             } catch (error) {
                 document.getElementById('products').innerHTML = `
-                    <p class="error-message">Ошибка загрузки. Пожалуйста, попробуйте позже.</p>
+                    <p style="color: red">Ошибка загрузки. Пожалуйста, попробуйте позже.</p>
                 `;
                 console.error('Ошибка:', error);
             }
         }
         
-        // Функция покупки с безопасной проверкой
         function buyProduct(productId) {
-            if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+            if (window.Telegram?.WebApp) {
                 Telegram.WebApp.sendData(JSON.stringify({
                     action: 'buy',
                     product_id: productId,
@@ -182,32 +177,6 @@
                 alert(`Товар ${productId} добавлен в корзину`);
             }
         }
-        
-        // Инициализация при загрузке страницы
-        document.addEventListener('DOMContentLoaded', function() {
-            // Настройка адаптации экрана
-            adjustLayout();
-            window.addEventListener('resize', adjustLayout);
-            
-            // Инициализация Telegram WebApp
-            if (!initTelegramWebApp()) {
-                // Если Telegram не загрузился сразу, проверяем периодически
-                const telegramCheckInterval = setInterval(() => {
-                    if (initTelegramWebApp()) {
-                        clearInterval(telegramCheckInterval);
-                    }
-                }, 100);
-                
-                // Останавливаем проверку через 3 секунды
-                setTimeout(() => clearInterval(telegramCheckInterval), 3000);
-            }
-            
-            // Загрузка товаров
-            const query = new URLSearchParams(window.location.search).get('q');
-            if (query) {
-                loadProducts(query);
-            }
-        });
     </script>
 </body>
 </html>
